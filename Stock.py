@@ -1,12 +1,9 @@
 """ Models a Stock with various indicators,
-with the primary feature of deciding whether to Buy, Sell, or Hold
-
-This error means youve made more than 5 requests in a minute:
-ValueError: Usecols do not match columns, columns expected but not found: ['close', 'adjusted_close', 'timestamp', 'volume', 'open']
+with the primary feature of deciding whether to Buy, Sell, or Hold a Stock
 
 TODO:
 automatic trading
-loop thru sp500 to see which to buy and sell. rank on best buys.
+clean code, pretty output, round doubles
 """
 
 
@@ -15,11 +12,9 @@ import pandas as pd
 import numpy as np
 from sklearn import linear_model
 from sklearn.neighbors import KNeighborsRegressor
-from datetime import datetime
 import warnings
 
-import Keys
-import time
+import QuoteHistory
 
 class Stock(object):
     """ Evaluates a given Stock with various indicators
@@ -39,27 +34,14 @@ class Stock(object):
         """
         self.buys = 0
         self.sells = 0
-        self.symbol = symbol
-        self.plot = plot
-        self.daily = self.get_data(symbol)
-        self.sp = self.get_data('^GSPC')
-        warnings.filterwarnings(action="ignore", module="sklearn", message="internal gelsd")
         self.shares = shares
+        self.symbol = symbol
+        self.will_plot = plot
+        self.daily = QuoteHistory.get_data(symbol)
+        self.sp = QuoteHistory.get_data('^GSPC')
+        warnings.filterwarnings(action="ignore", module="sklearn", message="internal gelsd")
         self.avg_paid = avg_paid
         self.debug = '\n' + self.symbol + ':\n'
-
-    def get_data(self, symbol):
-        """ Gets daily data from alphavantage API for past 100 days"""
-        # add &outputsize=full to get full data. else, shows past 100 market days
-        df = pd.read_csv('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={}&apikey={}&datatype=csv'.format(symbol, Keys.key),\
-                            index_col='timestamp', parse_dates=True, usecols=['timestamp', 'open', 'close', 'adjusted_close', 'volume'], na_values=['NaN'])
-        df = df.dropna()
-        df = df.iloc[::-1] # reverses for date ordering
-        df.to_csv(symbol, sep='\t', encoding='utf-8')
-        return df
-
-
-
 
 
     def buy_or_sell(self):
@@ -77,7 +59,7 @@ class Stock(object):
         Also charts SMA with Bollinger Bands, MACD histogram, and scatter with SP500
         """
         # print('\n' + self.symbol + ':\n')
-        if self.plot:
+        if self.will_plot:
             self.plot()
 
         self.predict()
@@ -92,7 +74,9 @@ class Stock(object):
         self.decision()
 
         print(self.debug)
-        # plt.show()
+
+        if self.will_plot:
+            plt.show()
 
     def decision(self):
         # print('\nBuying Points: {}'.format(self.buys))
@@ -113,8 +97,8 @@ class Stock(object):
     #
     def plot(self):
         # Adjusted Close
-        adjusted_close = self.normalize(self.daily['adjusted_close'])
-        ax = adjusted_close.plot(title=self.symbol + ' 100 Days', label=self.symbol, color='cyan', linewidth=5)
+        Adj_Close = self.normalize(self.daily['Adj Close'])
+        ax = Adj_Close.plot(title=self.symbol, label=self.symbol, color='cyan', linewidth=5)
         self.ax = ax # used by other plot like lin reg
         # Simple Moving Average
         self.sma(normalize=True).plot(label="SMA", alpha=0.5)
@@ -125,7 +109,7 @@ class Stock(object):
         lower.plot(label='lower', ax=ax, alpha=0.5)
 
         # S & P 500 ETF (the market)
-        sp_normalized = self.normalize(self.sp['adjusted_close'])
+        sp_normalized = self.normalize(self.sp['Adj Close'])
         sp_normalized.plot(label='S&P 500', alpha=0.5)
 
         # Add axis labels and legend
@@ -135,7 +119,7 @@ class Stock(object):
 
         # Plot Volume on a different Range
         ax2 = ax.twinx()
-        ax2.plot(self.daily['volume'], color='gray', alpha=0.3)
+        ax2.plot(self.daily['Volume'], color='gray', alpha=0.3)
         ax2.set_ylabel("Volume")
         ax2.legend(loc='lower right')
 
@@ -158,7 +142,7 @@ class Stock(object):
         Determines the simple moving average, with a 20-day window by default.
         Returns the SMA as a <class 'pandas.core.series.Series'>
         """
-        adj_close = self.daily['adjusted_close']
+        adj_close = self.daily['Adj Close']
         if normalize: adj_close = self.normalize(adj_close)
         sma = adj_close.rolling(window).mean()
         return sma
@@ -171,13 +155,13 @@ class Stock(object):
 
     def ema(self, normalize=False, span=20):
         """ exponential moving average """
-        values = self.daily['adjusted_close']
+        values = self.daily['Adj Close']
         if normalize: values = self.normalize(values)
         return pd.Series.ewm(values, span=span).mean()
 
     def rolling_std(self, window=20, normalize=False):
         """Return rolling standard deviation of given values, using specified window size."""
-        values = self.daily['adjusted_close']
+        values = self.daily['Adj Close']
         if normalize: values = self.normalize(values)
         return values.rolling(window).std()
 
@@ -221,7 +205,7 @@ class Stock(object):
         # format data
         df = self.normalize(self.daily)
         x = df.index.astype(np.int64).values.reshape(-1, 1)
-        y = self.normalize(df[['adjusted_close']]).values
+        y = self.normalize(df[['Adj Close']]).values
 
         one_day_time = 86400000000000
         x_tomorrow = x[-1] + one_day_time
@@ -231,16 +215,28 @@ class Stock(object):
         # average the predictions
         lin_reg = self.linear_regression(x, y, x_tomorrow, x_incl_tomorrow, dates)
         knn = self.knn(x, y, x_tomorrow, x_incl_tomorrow, dates)
-        tomorrow = [(lin_reg + knn) / 2]
-        today = [df['adjusted_close'][-1]]
-        # print('Expected price (mean of ML models): {}'.format(tomorrow[0] * self.daily['adjusted_close'][0]))
-        self.debug += '\nExpected price (mean of ML models): {}'.format(tomorrow[0] * self.daily['adjusted_close'][0])
-        # plot dotted line connecting stock today with tomorrow's prediction
-        predicting_line = np.append(today, tomorrow, axis=0)
+        tomorrow_norm = [(lin_reg + knn) / 2]
+        today_norm = [df['Adj Close'][-1]]
+        tomorrow = round((tomorrow_norm[0] * self.daily['Adj Close'][0]), 2)
+        today = self.daily['Adj Close'][-1]
+        # self.debug += '\nExpected price (mean of ML models): {}'.format(tomorrow[0] * self.daily['Adj Close'][0])
+        percent_gain = round((((tomorrow / today) - 1) * 100), 2)
+        percent_gain_int = abs(int(round(percent_gain, 0)))
+        # self.debug += '\nExpected price gain: {} %'.format(percent_gain_int)
 
-        if self.plot:
+        if percent_gain > 0:
+            self.debug += '\nExpected price gain: {} %, buys + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow)
+            self.buys += percent_gain_int
+        else:
+            self.debug += '\nExpected price gain: n {} %, sells + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow)
+            self.sells += percent_gain_int
+
+        # plot dotted line connecting stock today with tomorrow's prediction
+        predicting_line = np.append(today_norm, tomorrow_norm, axis=0)
+
+        if self.will_plot:
             self.ax.plot(dates[-2:], predicting_line, color='cyan', dashes=([1, 1, 1, 1]))
-            self.ax.plot(pd.to_datetime(x_tomorrow), tomorrow, marker='o', markersize=3, color="cyan")
+            self.ax.plot(pd.to_datetime(x_tomorrow), tomorrow_norm, marker='o', markersize=3, color="cyan")
 
 
     def linear_regression(self, x, y, x_tomorrow, x_incl_tomorrow, dates):
@@ -257,13 +253,13 @@ class Stock(object):
         b = regr.intercept_
 
         tomorrow_normalized = regr.predict([x_tomorrow])[0][0]
-        tomorrow = tomorrow_normalized * self.daily['adjusted_close'][0]
-        today = self.daily['adjusted_close'][-1]
-        percent_gain = ((tomorrow / today) - 1) * 100
+        tomorrow = round((tomorrow_normalized * self.daily['Adj Close'][0]), 2)
+        today = self.daily['Adj Close'][-1]
+        percent_gain = round(((tomorrow / today) - 1) * 100, 2)
         percent_gain_int = abs(int(round(percent_gain, 0)))
 
         # plot Lin Reg
-        if self.plot:
+        if self.will_plot:
             self.ax.plot(dates, regr.predict(x_incl_tomorrow), color='k', label='Linear Regression', dashes=([2, 2, 10, 2]))
             self.ax.legend(loc='best')
 
@@ -280,14 +276,13 @@ class Stock(object):
 
         if percent_gain > 0:
             # print('Regression: Price will be up {} %, buys + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow))
-            self.debug += '\nRegression: Price will be up {} %, buys + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow)
-            self.buys += percent_gain_int
+            self.debug += '\nRegression: Price will be up {} %, predicted close is {}'.format(percent_gain, tomorrow)
         else:
             # print('Regression: Price will be down {} %, sells + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow))
-            self.debug += '\nRegression: Price will be down {} %, sells + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow)
-            self.sells += percent_gain_int
+            self.debug += '\nRegression: Price will be down {} %, predicted close is {}'.format(percent_gain, tomorrow)
 
         return tomorrow_normalized
+
 
     def knn(self, x, y, x_tomorrow, x_incl_tomorrow, dates):
         """ predicts future price using knn
@@ -301,23 +296,21 @@ class Stock(object):
         neigh.fit(x, y)
 
         tomorrow_normalized = neigh.predict([x_tomorrow])[0][0]
-        tomorrow = tomorrow_normalized * self.daily['adjusted_close'][0]
-        today = self.daily['adjusted_close'][-1]
-        percent_gain = ((tomorrow / today) - 1) * 100
+        tomorrow = round((tomorrow_normalized * self.daily['Adj Close'][0]), 2)
+        today = self.daily['Adj Close'][-1]
+        percent_gain = round(((tomorrow / today) - 1) * 100, 2)
         percent_gain_int = abs(int(round(percent_gain, 0)))
 
-        if self.plot:
+        if self.will_plot:
             self.ax.plot(dates, neigh.predict(x_incl_tomorrow),label='KNN', dashes=([1, 1, 5, 1]))
             self.ax.legend(loc='best')
 
         if percent_gain > 0:
             # print('KNN: Price will be up {0} % tomorrow, buys + {1}, predicted close is {2}'.format(percent_gain, percent_gain_int, tomorrow))
-            self.debug += '\nKNN: Price will be up {0} % tomorrow, buys + {1}, predicted close is {2}'.format(percent_gain, percent_gain_int, tomorrow)
-            self.buys += percent_gain_int
+            self.debug += '\nKNN: Price will be up {} % tomorrow, predicted close is {}'.format(percent_gain, tomorrow)
         else:
             # print('KNN: Price will be down {0} % tomorrow, sells + {1}, predicted close is {2}'.format(percent_gain, percent_gain_int, tomorrow))
-            self.debug += '\nKNN: Price will be down {0} % tomorrow, sells + {1}, predicted close is {2}'.format(percent_gain, percent_gain_int, tomorrow)
-            self.sells += percent_gain_int
+            self.debug += '\nKNN: Price will be down {} % tomorrow, predicted close is {}'.format(percent_gain, tomorrow)
 
         return tomorrow_normalized
 
@@ -328,7 +321,7 @@ class Stock(object):
         Points: buys + 2 for below, sells + 2 for above
         """
         sma = self.sma()
-        if self.daily['adjusted_close'][-1] < sma[-1]:
+        if self.daily['Adj Close'][-1] < sma[-1]:
             # print('Below SMA: buys + 1')
             self.debug += '\nBelow SMA: buys + 1'
             self.buys += 1
@@ -346,11 +339,11 @@ class Stock(object):
             + 3 for just being outside band
         """
         upper, lower = self.bollinger_bands()
-        if self.daily['adjusted_close'][-1] > upper[-1]:
+        if self.daily['Adj Close'][-1] > upper[-1]:
             # print('Above upper bollinger: sells + 1')
             self.debug += '\nAbove upper bollinger: sells + 1'
             self.sells += 1
-        elif self.daily['adjusted_close'][-1] < lower[-1]:
+        elif self.daily['Adj Close'][-1] < lower[-1]:
             # print('Below lower bollinger: buys + 1')
             self.debug += '\nBelow lower bollinger: buys + 1'
             self.buys += 1
@@ -365,20 +358,20 @@ class Stock(object):
             if more than avg, add 1 to each
             if less than avg, subtract 1, etc etc
         """
-        vol = self.daily['volume']
+        vol = self.daily['Volume']
         sma = vol.rolling(20).mean()
         std = vol.rolling(20).std()
         upper = sma + std
         lower = sma - std
 
         if vol[-1] > upper[-1]:
-            # print('volume > 1 STD above sma: buys + 1, sells + 1')
-            self.debug += '\nvolume > 1 STD above sma: buys + 1, sells + 1'
+            # print('Volume > 1 STD above sma: buys + 1, sells + 1')
+            self.debug += '\nVolume > 1 STD above sma: buys + 1, sells + 1'
             self.sells += 1
             self.buys += 1
         else:
             # print('Volume in normal levels. Upper Limit: {0}, Current: {1}'.format(upper[-1], vol[-1]))
-            self.debug += '\nVolume in normal levels. Upper Limit: {0}, Current: {1}'.format(upper[-1], vol[-1])
+            self.debug += '\nVolume in normal levels'
 
     def rsi(self, days=14):
         """ relevant strength index oscillator
@@ -387,14 +380,14 @@ class Stock(object):
             if more than 70%, sell + 3
             if less than 30%, buy + 3
         """
-        daily_returns = self.daily_returns(self.daily[['adjusted_close']]).tail(14)
+        daily_returns = self.daily_returns(self.daily[['Adj Close']]).tail(14)
         green_days = daily_returns[daily_returns > 0].dropna()
         red_days = daily_returns[daily_returns < 0].dropna()
 
         # RS= avg of Up Days - avg of Down Days. Note im adding bc red_days is negative.
-        RS = (green_days.sum() / days + red_days.sum() / days)['adjusted_close']
+        RS = (green_days.sum() / days + red_days.sum() / days)['Adj Close']
         rsi = 100 - (100 / (1 + RS))
-
+        rsi = round(rsi, 2)
         if rsi < 0.3:
             # print('RSI is under 30%: {0} buys ++'.format(rsi))
             self.debug += '\nRSI is under 30%: {0} buys ++'.format(rsi)
@@ -419,10 +412,11 @@ class Stock(object):
         annual_free = 1.02 # 2 percent annual
         daily_risk_free = annual_free ** (1. / 252) - 1
         sqrt = np.sqrt(252)
-        dr = self.daily_returns(self.daily['adjusted_close'])
+        dr = self.daily_returns(self.daily['Adj Close'])
         mean = (dr - daily_risk_free).mean()
         stddev = dr.std()
         sharpe =  sqrt * mean / stddev
+        sharpe = round(sharpe, 1)
         rounded = int(round(sharpe, 0))
 
         if sharpe < 1:
@@ -449,7 +443,7 @@ class Stock(object):
             If its the min/max of the specified time frame, add 2
             if its within 4 of the min/max, add 1
         """
-        df = self.daily['adjusted_close']
+        df = self.daily['Adj Close']
         min = df.min()
         max = df.max()
         if df[-1] == min:
@@ -478,15 +472,19 @@ class Stock(object):
             # print('No shares owned.')
             self.debug += '\nNo shares owned.'
         else:
-            price = self.daily['adjusted_close'][-1]
-            if self.avg_paid < price:
+            price = self.daily['Adj Close'][-1]
+            gains = self.shares * (price - self.avg_paid)
+            percent = (price / avg_paid - 1) * 100
+            gains = round(gains, 2)
+            percent = round(percent, 2)
+            if gains < 0:
                 penalty = self.sells - int(round(self.sells / 3.0, 0))
                 # print('NET LOSS: AVOID SELLING! sells - {}'.format(penalty))
-                self.debug += '\nNET LOSS: AVOID SELLING! sells - {}'.format(penalty)
+                self.debug += '\nNET LOSS: {}, {}%, AVOID SELLING! sells - {}'.format(gains, percent, penalty)
                 self.sells -= penalty
             else:
                 # print('No net loss.')
-                self.debug += '\nNo net loss.'
+                self.debug += '\nNet gains: ${}, {}%'.format(gains, percent)
 
 
     def beta_and_alpha(self):
@@ -500,13 +498,14 @@ class Stock(object):
             Im assuming market is going up.
         """
         # make scatter plot
-        sp_temp = self.daily_returns(self.sp.rename(columns={'adjusted_close': '^GSPC'}))
-        symbol_temp = self.daily_returns(self.daily.rename(columns={'adjusted_close': self.symbol}))
-        joined = sp_temp.merge(symbol_temp, on='timestamp')
+        sp_temp = self.daily_returns(self.sp.rename(columns={'Adj Close': '^GSPC'}))
+        symbol_temp = self.daily_returns(self.daily.rename(columns={'Adj Close': self.symbol}))
+        joined = sp_temp.merge(symbol_temp, on='Date')
 
         # beta and alpha
         beta, alpha = np.polyfit(joined["^GSPC"], joined[self.symbol], 1)
-
+        beta = round(beta, 3)
+        alpha = round(alpha, 5)
         if alpha > 0:
             self.buys += 1
             # print('Alpha > 0: buys++ {}'.format(alpha))
@@ -525,57 +524,21 @@ class Stock(object):
             self.debug += '\nBeta < 1: {}'.format(beta)
 
         # finish plotting scatter
-        joined.plot(kind = 'scatter', x='^GSPC', y=self.symbol)
-        plt.plot(joined["^GSPC"], beta * joined['^GSPC'] + alpha, '-', color='r', label='Correlation')
+        if self.will_plot:
+            joined.plot(kind = 'scatter', x='^GSPC', y=self.symbol)
+            plt.plot(joined["^GSPC"], beta * joined['^GSPC'] + alpha, '-', color='r', label='Correlation')
 
-        # plot expected beta (slope) of 1 and alpha (y- int.) of zero
-        plt.plot(joined["^GSPC"], 1 * joined['^GSPC'] + 0, '-', color='gray', label='Beta of 1')
-        plt.plot(joined["^GSPC"], 0 * joined['^GSPC'] + 0, '-', color='gray', label='Alpha of 0')
-        plt.legend(loc='best')
+            # plot expected beta (slope) of 1 and alpha (y- int.) of zero
+            plt.plot(joined["^GSPC"], 1 * joined['^GSPC'] + 0, '-', color='gray', label='Beta of 1')
+            plt.plot(joined["^GSPC"], 0 * joined['^GSPC'] + 0, '-', color='gray', label='Alpha of 0')
+            plt.legend(loc='best')
 
 
 
 
 if __name__ == '__main__':
-    # symbol = input('Symbol: ')
-    # shares = input('Current Shares: ')
-    # avg_paid = input('Avg Price Paid: ') if int(shares) > 0 else 0
-    #
-    # Stock(symbol, shares, avg_paid).buy_or_sell()
+    symbol = input('Symbol: ')
+    shares = int(input('Current Shares: '))
+    avg_paid = int(input('Avg Price Paid: ')) if int(shares) > 0 else 0
 
-    stocks = []
-    a = Stock("GOOGL", 0, 0, plot=False)
-    a.buy_or_sell()
-    stocks.append(a)
-    # time.sleep(10)
-    b = Stock("AMZN", 0, 0, plot=False)
-    # time.sleep(10)
-    stocks.append(b)
-    b.buy_or_sell()
-    # time.sleep(30)
-    # c = Stock("AAPL", 0, 0, plot=False)
-    # stocks.append(c)
-    # c.buy_or_sell()
-    #
-    # # print(stocks)
-    stocks.sort(key=lambda x: x.buying_certainty, reverse=True)
-    print('\n\n\nSORTED STOCKS:\n\n\n')
-    for x in stocks:
-        print(x.debug)
-
-
-
-    # stocks = []
-    # df = pd.read_csv('SP500.csv')
-    # for sym in df['Symbol']:
-    #     x = Stock(sym,  0, 0, plot=False)
-    #     x.buy_or_sell()
-    #     stocks.append(x)
-    #     time.sleep(65)
-    #
-    # stocks.sort(key=lambda x: x.buying_certainty, reverse=True)
-    # print('\n\n\nSORTED STOCKS:\n\n\n')
-    # sorted = stocks[:20]
-    # for x in sorted:
-    #     print(x.debug)
-#
+    Stock(symbol, shares, avg_paid).buy_or_sell()

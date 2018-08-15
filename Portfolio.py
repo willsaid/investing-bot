@@ -1,6 +1,11 @@
-""" Computes a portfolio's Cumulative Return, Average Daily Returns, Risk, and Sharpe Ratio
+""" Computes a portfolios Cumulative Return, Average Daily Returns, Risk, and Sharpe Ratio
 Optimizes your portfolio with stock covariance
-""""
+
+todo
+fix init start date end date
+show before and after better in legend
+improve printing output, make code pretty, etc
+"""
 
 import pandas as pd
 import numpy as np
@@ -8,56 +13,50 @@ import datetime as dt
 import matplotlib.pyplot as plt
 import scipy.optimize as spo
 import time
-import Keys
+
+import QuoteHistory
+
+
 
 class Portfolio(object):
 
-    def __init__(self, start_value, start_date, end_date, symbols, allocs, df=None):
+    def __init__(self, start_value, symbols, allocs, start_date, end_date, df=None):
         self.start_value = start_value
         self.start_date = start_date
         self.end_date = end_date
         self.allocs = allocs
         self.symbols = symbols
         if df is None:
-            dates = pd.date_range(start_date, end_date)
-            df = self.get_data(symbols, dates)
+            df = self.get_data(symbols)
         self.df = df
         self.port_val = self.get_port_val(df, allocs, start_value)
         self.daily_returns = self.daily_returns(self.port_val)
 
-    def get_csv(self, symbol, key):
-        """ Gets daily data from alphavantage API for past 100 days"""
-        df = pd.read_csv('https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol={}&apikey={}&outputsize=full&datatype=csv'.format(symbol, key),\
-                            index_col='timestamp', parse_dates=True, usecols=['timestamp', 'adjusted_close'], na_values=['NaN'])
-        df = df.iloc[::-1] # reverses for date ordering
-        return df
-
-    def get_data(self, symbols, dates):
+    def get_data(self, symbols):
         """Read stock data (adjusted close) for given symbols from CSV files."""
-        apis = [Keys.key]
-        api_count = 0 # 0-5
-        df = self.get_csv('^GSPC', apis[0])['2017-01-01': '2017-12-31']
-        df.dropna()
-        api_count += 1
-        for symbol in symbols:
-            print(symbol)
-            time.sleep(61)
+        df = QuoteHistory.get_data('^GSPC', self.start_date, self.end_date)
+        df = df.rename(columns={'Adj Close': '^GSPC'}).drop('Volume', axis=1).dropna()
 
-            df_temp = self.get_csv(symbol, apis[0])
-            df_temp = df_temp.rename(columns={'adjusted_close': symbol})
-            df[symbol] = df_temp['2017-01-01': '2017-12-31']
-        df = df.loc[:, symbols[0]:symbols[-1]]
-        print('FINAL DF:')
-        print(df)
-        self.df = df
+        for symbol in symbols:
+            try:
+                df_temp = QuoteHistory.get_data(symbol, self.start_date, self.end_date)
+                df_temp = df_temp.drop('Volume', axis=1)
+                df[symbol] = df_temp
+            except Exception:
+                print('Failed to determine for {}'.format(symbol))
+
+        df = df.drop('^GSPC', axis=1) # get rid of first stock
         return df
+
 
     def get_port_val(self, df, allocs, start_value):
         # print("raw df")
         # print(df)
         df = df / df.iloc[0]
         # print("normalized")
+        # print('here')
         # print(df)
+        # print(allocs)
         df = df * allocs
         # print("with allocs")
         # print(df)
@@ -117,7 +116,7 @@ class Portfolio(object):
         """ function being minimized """
 
         # x = [0.06613882 0.93386119 0.        ], y = 3.5938127680415937
-        daily_returns = Portfolio(1.0, self.start_date, self.end_date, self.symbols, allocs, self.df).daily_returns
+        daily_returns = Portfolio(1.0, self.symbols, allocs, self.start_date, self.end_date, self.df).daily_returns
 
         y = np.sqrt(252) * daily_returns.mean() / daily_returns.std()
 
@@ -139,11 +138,11 @@ class Portfolio(object):
         print("x = {}, y = {}".format(min_result.x, min_result.fun))
 
         # plot guess
-        guess = Portfolio(1.0, self.start_date, self.end_date, self.symbols, Xguess, self.df).port_val
+        guess = Portfolio(1.0, self.symbols, Xguess, self.start_date, self.end_date, self.df).port_val
         plt.plot(guess)
 
         # plot optimized
-        optimized = Portfolio(1.0, self.start_date, self.end_date, self.symbols, min_result.x, self.df).port_val
+        optimized = Portfolio(1.0, self.symbols, min_result.x, self.start_date, self.end_date, self.df).port_val
         plt.plot(optimized)
 
         plt.show()
@@ -153,29 +152,6 @@ class Portfolio(object):
 
 
 
-
-
-
-def test_run():
-    port = Portfolio(1, '2017-01-01', '2017-12-31', ['GOOGL', 'AAPL', 'AMZN'], [.3, .3, .4])
-    # port = Portfolio(1, '2017-01-01', '2017-12-31', \
-    #             ['WBA', 'CSCO', 'PG', 'UNH', 'AXP', 'PFE', 'BA', 'MCD', 'V', 'JNJ', 'VZ', 'DIS', 'KO', 'WMT', 'TRV', 'AAPL', 'CAT', 'UTX', 'NKE', 'MSFT',\
-    #              'CVX', 'INTC', 'MRK', 'MMM', 'XOM', 'HD', 'GS', 'IBM', 'JPM', 'DWDP'],\
-    #             30 * [1./30])
-
-    print("Sharpe:")
-    print(port.sharpe_ratio())
-    print("Volatility:")
-    print(port.risk())
-    print("Avg Daily Return:")
-    print(port.avg_daily_returns())
-    print("Cumulative returns:")
-    print(port.cumulative_return())
-    print("Ideal Allocations for Sharpe:")
-    print(port.optimizer())
-
-if __name__ == "__main__":
-    test_run()
 
 
 
