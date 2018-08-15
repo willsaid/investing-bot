@@ -1,4 +1,6 @@
-""" Computes a portfolio's Cumulative Return, Average Daily Returns, Risk, and Sharpe Ratio """
+""" Computes a portfolio's Cumulative Return, Average Daily Returns, Risk, and Sharpe Ratio
+Optimizes your portfolio with stock covariance
+""""
 
 import pandas as pd
 import numpy as np
@@ -40,22 +42,6 @@ class Portfolio(object):
         for symbol in symbols:
             print(symbol)
             time.sleep(61)
-            #
-            # print('a')
-            # if api_count == 4:
-            #     api_count = 0
-            #     print('b')
-            #     if api_index == 7:
-            #         api_index = 0
-            #         print('c')
-            #     else:
-            #         api_index += 1
-            #         print('d')
-            # else:
-            #     api_count += 1
-            #     print('e')
-
-            # print(apis[0])
 
             df_temp = self.get_csv(symbol, apis[0])
             df_temp = df_temp.rename(columns={'adjusted_close': symbol})
@@ -127,14 +113,6 @@ class Portfolio(object):
     def ending_value(self):
         return self.port_val[-1]
 
-# x = [0.00000000e+00, 9.58494965e-16, 1.32725190e-14, 3.69272282e-02,\
-#  1.53696400e-14, 9.66007166e-15, 1.67921551e-01, 1.47104562e-01,\
-#  4.82097641e-02, 1.30556244e-01, 0.00000000e+00, 6.76189218e-15,\
-#  5.14947084e-02, 9.44793291e-02, 1.67976329e-14, 4.39450312e-02,\
-#  3.36186639e-02, 0.00000000e+00, 1.15473200e-02, 1.57644599e-14,\
-#  7.43988871e-15, 4.71039436e-15, 0.00000000e+00, 7.14087672e-02,\
-#  0.00000000e+00, 1.52262395e-01, 0.00000000e+00, 0.00000000e+00,\
-#  0.00000000e+00, 1.05244363e-02]
     def sharpe_optimizer(self, allocs):
         """ function being minimized """
 
