@@ -21,3 +21,9 @@ Examples.py will walk you through example usages of tbe Stock and Portfolio clas
 - Maxmizing the Sharpe Ratio of all 30 stocks in the Dow Jones Industrial Index by determining optimal percentage allocations
 
 These will also plot charts to display the data.
+
+<img src="/screenshots/fb.png" width="250px">
+<img src="/screenshots/aapl1.png" width="250px">
+<img src="/screenshots/aapl2.png" width="250px">
+<img src="/screenshots/dow1.png" width="250px">
+<img src="/screenshots/dow2.png" width="250px">

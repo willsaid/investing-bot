@@ -41,7 +41,7 @@ def custom_portfolio(fresh):
     """ Example portfolio optimization and analysis
     of Apple and Google from Aug 16, 2017 to Aug 16, 2018.
     """
-    Portfolio.Portfolio(1, ['AAPL', 'GOOGL'], [.5, .5], '2017-08-16', '2018-08-16', fresh).debug()
+    Portfolio.Portfolio(1, ['AAPL', 'GOOGL', 'AMZN'], [.5, .5, 0.0], '2017-08-16', '2018-08-16', fresh).debug()
 
 
 def single_stock(fresh):

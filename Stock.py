@@ -395,7 +395,7 @@ class Stock(object):
         else:
             price = self.daily['Adj Close'][-1]
             gains = self.shares * (price - self.avg_paid)
-            percent = (price / avg_paid - 1) * 100
+            percent = (price / self.avg_paid - 1) * 100
             gains = round(gains, 2)
             percent = round(percent, 2)
             if gains < 0:
