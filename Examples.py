@@ -1,18 +1,24 @@
+""" Example usages of the Stock and Portfolio classes.
+
+Usage: 'python3 Examples.py'
+"""
 
 import pandas as pd
 
+# local
 import Stock
 import Portfolio
 
-def best_in_sp500():
+
+def best_in_sp500(fresh):
     """ Finds the top 20 stocks to buy right now in the S&P 500 """
     stocks = []
     df = pd.read_csv('indices/sp_members.csv')
     for sym in df['Symbol']:
-        sym.replace(".", "-") # BRK.B -> BRK-B
+        print(sym)
         try:
-            x = Stock.Stock(sym,  0, 0, plot=False)
-            x.buy_or_sell()
+            x = Stock.Stock(sym,  0, 0, fresh, plot=False)
+            x.buy_or_sell(debug=False)
             stocks.append(x)
         except Exception:
             print('Failed to determine for {}'.format(sym))
@@ -24,24 +30,39 @@ def best_in_sp500():
         print(x.debug)
 
 
-def optimized_dowjones():
-    """ The best possible allocations of stocks in the Dow Jones from the past year """
-    # stocks = pd.read_csv('indices/dow_members.csv')['Symbol'].values
-    # port = Portfolio.Portfolio(1, stocks, 30 * [1./30], '2017-01-01', '2017-12-31')
-    port = Portfolio.Portfolio(1, ['GOOGL', 'AAPL', 'AMZN'], [1., 0., 0.], '2017-01-01', '2017-12-31')
-    print("Sharpe:")
-    print(port.sharpe_ratio())
-    print("Volatility:")
-    print(port.risk())
-    print("Avg Daily Return:")
-    print(port.avg_daily_returns())
-    print("Cumulative returns:")
-    print(port.cumulative_return())
-    print("Ideal Allocations for Sharpe:")
-    port.optimizer()
+def optimized_dowjones(fresh):
+    """ The best possible allocations of stocks in the Dow Jones Index from the past year """
+    stocks = pd.read_csv('indices/dow_members.csv')['Symbol'].values
+    guess_allocations = 30 * [1./30] # even distribution of 1/30 for each stock
+    port = Portfolio.Portfolio(1, stocks, guess_allocations, '2017-08-16', '2018-08-16', fresh).debug()
+
+
+def custom_portfolio(fresh):
+    """ Example portfolio optimization and analysis
+    of Apple and Google from Aug 16, 2017 to Aug 16, 2018.
+    """
+    Portfolio.Portfolio(1, ['AAPL', 'GOOGL'], [.5, .5], '2017-08-16', '2018-08-16', fresh).debug()
+
+
+def single_stock(fresh):
+    symbol = input('\nSymbol: ')
+    shares = int(input('Current Shares: '))
+    avg_paid = int(input('Avg Price Paid: ')) if int(shares) > 0 else 0
+
+    Stock.Stock(symbol, shares, avg_paid, fresh).buy_or_sell()
+
+
 
 if __name__ == '__main__':
-    optimized_dowjones()
+    option = input('Choose example:\n  \'b\': Best Stocks to Buy in S&P 500\n  \'o\': Optimized Dow Jones Portfolio\n  \'s\': Single Stock Prediction\n  \'c\': Custom Portfolio Analysis\n')
+    fresh = input('Need Fresh data? (Select yes if date ranges have been modified) [\'y\' or \'n\']\n') == 'y'
 
-
+    if option == 'b':
+        best_in_sp500(fresh)
+    elif option == 'o':
+        optimized_dowjones(fresh)
+    elif option == 's':
+        single_stock(fresh)
+    elif option == 'c':
+        custom_portfolio(fresh)
 #
