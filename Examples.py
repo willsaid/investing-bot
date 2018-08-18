@@ -41,7 +41,7 @@ def custom_portfolio(fresh):
     """ Example portfolio optimization and analysis
     of Apple and Google from Aug 16, 2017 to Aug 16, 2018.
     """
-    Portfolio.Portfolio(1, ['AAPL', 'GOOGL', 'AMZN'], [.5, .5, 0.0], '2017-08-16', '2018-08-16', fresh).debug()
+    Portfolio.Portfolio(1, ['AAPL', 'GOOGL', 'AMZN'], [.34, .33, .33], '2017-08-16', '2018-08-16', fresh).debug()
 
 
 def single_stock(fresh):
@@ -55,7 +55,7 @@ def single_stock(fresh):
 
 if __name__ == '__main__':
     option = input('Choose example:\n  \'b\': Best Stocks to Buy in S&P 500\n  \'o\': Optimized Dow Jones Portfolio\n  \'s\': Single Stock Prediction\n  \'c\': Custom Portfolio Analysis\n')
-    fresh = input('Need Fresh data? (Select yes if date ranges have been modified) [\'y\' or \'n\']\n') == 'y'
+    fresh = input('Need Fresh data? (Default to yes) [\'y\' or \'n\']\n') == 'y'
 
     if option == 'b':
         best_in_sp500(fresh)

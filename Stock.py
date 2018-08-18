@@ -208,7 +208,7 @@ class Stock(object):
             self.debug += '\nExpected price gain: {} %, buys + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow)
             self.buys += percent_gain_int
         else:
-            self.debug += '\nExpected price gain: n {} %, sells + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow)
+            self.debug += '\nExpected price gain: {} %, sells + {}, predicted close is {}'.format(percent_gain, percent_gain_int, tomorrow)
             self.sells += percent_gain_int
 
         # plots dotted line connecting stock today with tomorrow's prediction
@@ -274,9 +274,9 @@ class Stock(object):
             self.ax.legend(loc='best')
 
         if percent_gain > 0:
-            self.debug += '\nKNN: Price will be up {} % tomorrow, predicted close is {}'.format(percent_gain, tomorrow)
+            self.debug += '\nKNN: Price will be up {} %, predicted close is {}'.format(percent_gain, tomorrow)
         else:
-            self.debug += '\nKNN: Price will be down {} % tomorrow, predicted close is {}'.format(percent_gain, tomorrow)
+            self.debug += '\nKNN: Price will be down {} %, predicted close is {}'.format(percent_gain, tomorrow)
 
         return tomorrow_normalized
 
@@ -435,7 +435,8 @@ class Stock(object):
 
         # finish plotting scatter
         if self.will_plot:
-            joined.plot(kind = 'scatter', x='^GSPC', y=self.symbol)
+            ax = joined.plot(title=self.symbol + ' vs The Market', kind = 'scatter', x='^GSPC', y=self.symbol)
+            ax.set_xlabel("S&P 500")
             plt.plot(joined["^GSPC"], beta * joined['^GSPC'] + alpha, '-', color='r', label='Correlation')
 
             # plot expected beta (slope) of 1 and alpha (y- int.) of zero
