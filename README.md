@@ -37,7 +37,7 @@ These will also plot charts to display the data. Example charts:
 
 ## AMZN Analysis:
 
-<img src="/screenshots/amzn.png" width="100%">
+<img src="/screenshots/amzn1.png" width="100%">
 
 
 ## FB Analysis:
