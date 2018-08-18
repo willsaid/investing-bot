@@ -20,10 +20,18 @@ Examples.py will walk you through example usages of tbe Stock and Portfolio clas
 - Optimizing the allocation percentages of stocks in your custom Portfolio to maximize risk-adjusted returns (Sharpe Ratio)
 - Maxmizing the Sharpe Ratio of all 30 stocks in the Dow Jones Industrial Index by determining optimal percentage allocations
 
-These will also plot charts to display the data.
+These will also plot charts to display the data. Example charts:
 
-<img src="/screenshots/fb.png" width="250px">
-<img src="/screenshots/aapl1.png" width="250px">
-<img src="/screenshots/aapl2.png" width="250px">
-<img src="/screenshots/dow1.png" width="250px">
-<img src="/screenshots/dow2.png" width="250px">
+AAPL single-stock analyis and prediction:
+
+<img src="/screenshots/aapl1.png" width="100%">
+<img src="/screenshots/aapl2.png" width="100%">
+
+Dow Jones portfolio optimization:
+
+<img src="/screenshots/dow1.png" width="100%">
+<img src="/screenshots/dow2.png" width="100%">
+
+FB Analysis:
+
+<img src="/screenshots/fb.png" width="100%">
