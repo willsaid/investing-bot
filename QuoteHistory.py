@@ -54,10 +54,11 @@ def download_quote(symbol, date_from, date_to, events):
     return b''
 
 
-def get_data(symbol_val, is_fresh, start=None, end=None):
+def get_data(symbol_val, is_fresh, start=None, end=None, days=None):
     """ Returns pandas dataframe of Date, Adj Close, and Volume from Yahoo Finance, or None if not available.
     End date can be assumed to be today.
     Start date is automatically 140 days ago, or about 100 market days.
+    Days ex: 365 for the past year.
     """
     symbol_val = symbol_val.replace('.', '-') # BRK.B -> BRK-B
     event_val = "history" # historical data
@@ -65,7 +66,7 @@ def get_data(symbol_val, is_fresh, start=None, end=None):
 
     # set begin and end date time strings
     if start is None and end is None:
-        from_val, to_val = get_date()
+        from_val, to_val = get_date(days)
     elif end is None:
         from_val = start
         to_val = get_date_string(datetime.datetime.now())
@@ -90,8 +91,9 @@ def get_data(symbol_val, is_fresh, start=None, end=None):
         return pd.read_csv(output_val, index_col='Date', parse_dates=True, usecols=['Date', 'Adj Close', 'Volume'], na_values=['NaN']).dropna()
 
 
-def get_date(days=140):
+def get_date(days):
     """ Returns starting and ending date (like '2018-08-15') given amount of days to go back """
+    if days is None: days = 140 # about 100 trading days
     now = datetime.datetime.now()
     past = now - datetime.timedelta(days=days)
     return get_date_string(past), get_date_string(now)

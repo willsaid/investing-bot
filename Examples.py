@@ -31,17 +31,15 @@ def best_in_sp500(fresh):
 
 
 def optimized_dowjones(fresh):
-    """ The best possible allocations of stocks in the Dow Jones Index from the past year """
+    """ The best possible allocations of all 30 stocks in the Dow Jones Index over the past year """
     stocks = pd.read_csv('indices/dow_members.csv')['Symbol'].values
     guess_allocations = 30 * [1./30] # even distribution of 1/30 for each stock
-    port = Portfolio.Portfolio(1, stocks, guess_allocations, '2017-08-16', '2018-08-16', fresh).debug()
+    port = Portfolio.Portfolio(1, stocks, guess_allocations, fresh=fresh, days=365).debug()
 
 
 def custom_portfolio(fresh):
-    """ Example portfolio optimization and analysis
-    of Apple and Google from Aug 16, 2017 to Aug 16, 2018.
-    """
-    Portfolio.Portfolio(1, ['AAPL', 'GOOGL', 'AMZN'], [.34, .33, .33], '2017-08-16', '2018-08-16', fresh).debug()
+    """ Example portfolio optimization and analysis of 4 stocks over the past year """
+    Portfolio.Portfolio(1, ['AAPL', 'GOOGL', 'AMZN', 'FB'], [.25, .25, .25, .25], fresh=fresh, days=365).debug()
 
 
 def single_stock(fresh):

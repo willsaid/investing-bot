@@ -37,7 +37,7 @@ import QuoteHistory
 
 class Portfolio(object):
 
-    def __init__(self, start_value, symbols, allocs, start_date, end_date, fresh=False, df=None):
+    def __init__(self, start_value, symbols, allocs, start_date=None, end_date=None, fresh=False, days=None, df=None):
         """start_value: starting value of portfolio, like 1000.50
         allocs: percentage allocations for each stock, like [0.3, 0.4, 0.3]
         start_date, end_date: like '2018-12-13'
@@ -50,6 +50,7 @@ class Portfolio(object):
         self.allocs = allocs
         self.fresh = fresh
         self.symbols = symbols
+        self.days = days
         if df is None:
             df = self.get_data(symbols)
         self.df = df
@@ -61,11 +62,11 @@ class Portfolio(object):
         Returns dataframe of all stocks inner joined on ^GSPC's 'Date' index_col
         """
         # set up dataframe with S&P 500
-        df = QuoteHistory.get_data('^GSPC', self.fresh, self.start_date, self.end_date)
+        df = QuoteHistory.get_data('^GSPC', self.fresh, self.start_date, self.end_date, self.days)
         df = df.rename(columns={'Adj Close': '^GSPC'}).drop('Volume', axis=1).dropna()
         for symbol in symbols:
             try:
-                df_temp = QuoteHistory.get_data(symbol, self.fresh, self.start_date, self.end_date)
+                df_temp = QuoteHistory.get_data(symbol, self.fresh, self.start_date, self.end_date, self.days)
                 df_temp = df_temp.drop('Volume', axis=1) # bc we only want adjusted close
                 df[symbol] = df_temp # adds symbol to DF
             except Exception:
@@ -80,7 +81,7 @@ class Portfolio(object):
         """ Prints out the analysis of the portfolio """
         # Optimize the portfolio
         x, y = self.optimizer()
-        optimized = Portfolio(1.0, self.symbols, x, self.start_date, self.end_date, self.fresh, self.df)
+        optimized = Portfolio(1.0, self.symbols, x, self.start_date, self.end_date, self.fresh, self.days, self.df)
 
         print('Minima found at\nx = {}, y = {}'.format(x, y))
         print("\nOptimized Allocations for Maxmimum Risk-Adjusted Returns:")
@@ -186,7 +187,7 @@ class Portfolio(object):
         Takes `allocs`, a list of percentage allocations like [0.6, 0.4] as input
          to determine gradient descent of the sharpe ratio function
         """
-        daily_returns = Portfolio(1.0, self.symbols, allocs, self.start_date, self.end_date, self.fresh, self.df).daily_returns
+        daily_returns = Portfolio(1.0, self.symbols, allocs, self.start_date, self.end_date, self.fresh, self.days, self.df).daily_returns
 
         # get sharpe ratio with new allocations
         y = self.sharpe_ratio(daily_returns)
