@@ -6,8 +6,9 @@ Usage: 'python3 Examples.py'
 import pandas as pd
 
 # local
-import Stock
-import Portfolio
+from src import Stock, Portfolio, QuoteHistory
+# import Stock
+# import Portfolio
 
 
 def best_in_sp500(fresh):

@@ -31,7 +31,7 @@ import scipy.optimize as spo
 import time
 
 # local
-import QuoteHistory
+from src import QuoteHistory
 
 
 
@@ -73,6 +73,9 @@ class Portfolio(object):
                 print('Failed to determine for {}'.format(symbol))
 
         df = df.drop('^GSPC', axis=1) # gets rid of first stock used for indexing
+        # deal with NaN's by filling existing values forward, then backward
+        # ideally, user should just use new data!
+        df = df.fillna(method='ffill').fillna(method='backfill')
         return df
 
 
