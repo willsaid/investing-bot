@@ -31,7 +31,7 @@ class Stock(object):
 
     # SETUP
     #
-    def __init__(self, symbol, shares, avg_paid, fresh=False, plot=True):
+    def __init__(self, symbol, shares, avg_paid, fresh=False, plot=True, days=140):
         """ Sample Inputs:
         Symbol 'SBUX', Current Shares 0, Avg Price Paid 50.10
         """
@@ -40,8 +40,8 @@ class Stock(object):
         self.shares = shares
         self.symbol = symbol
         self.will_plot = plot
-        self.daily = QuoteHistory.get_data(symbol, fresh)
-        self.sp = QuoteHistory.get_data('^GSPC', fresh)
+        self.daily = QuoteHistory.get_data(symbol, fresh, days=days)
+        self.sp = QuoteHistory.get_data('^GSPC', fresh, days=days)
         warnings.filterwarnings(action="ignore", module="sklearn", message="internal gelsd")
         self.avg_paid = avg_paid
         self.debug = '\n' + self.symbol + ':\n'
@@ -82,7 +82,17 @@ class Stock(object):
         else:
             decision = 'HOLD'
         self.debug += '\nFINAL DECISION: \n{}'.format(decision)
+        # certainty to just BUY, used for s&p traversals.
         self.buying_certainty = self.buys - self.sells
+        # percent certainty for a sell or buy
+        # is difference divided by sum of sell and buys.
+        # for example, certainty of 1 sell/9 buys =
+        # (abs(1-9)) / (1 + 9) = 8 / 10 = 0.80 = 80% certainty (to sell, in this case)
+        percent_certainty = abs(self.buys - self.sells) / (self.buys + self.sells)
+        if decision == 'HOLD':
+            percent_certainty = 1 - percent_certainty
+        percent_certainty = round(percent_certainty * 100, 2)
+        self.debug += '\nCertainty: {}%'.format(percent_certainty)
 
 
     def plot(self):

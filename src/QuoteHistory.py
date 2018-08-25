@@ -77,7 +77,7 @@ def get_data(symbol_val, is_fresh, start=None, end=None, days=None):
     # use old data if present and if is_fresh
     if not is_fresh and os.path.isfile(output_val):
         try:
-            return pd.read_csv(output_val, index_col='Date', parse_dates=True, usecols=['Date', 'Adj Close', 'Volume'], na_values=['NaN']).dropna()
+            return pd.read_csv(output_val, index_col='Date', parse_dates=True, usecols=['Date', 'Adj Close', 'Volume'], na_values=['NaN']).dropna()[from_val: to_val]
         except Exception:
             print('Failed to read from {}. Now fetching {} fresh from network.'.format(output_val, symbol_val))
 
@@ -88,7 +88,7 @@ def get_data(symbol_val, is_fresh, start=None, end=None, days=None):
         with open(output_val, 'wb') as f:
             f.write(csv)
         print ("{} written to {}".format(symbol_val, output_val))
-        return pd.read_csv(output_val, index_col='Date', parse_dates=True, usecols=['Date', 'Adj Close', 'Volume'], na_values=['NaN']).dropna()
+        return pd.read_csv(output_val, index_col='Date', parse_dates=True, usecols=['Date', 'Adj Close', 'Volume'], na_values=['NaN']).dropna()[from_val: to_val]
 
 
 def get_date(days):
