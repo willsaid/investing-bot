@@ -5,6 +5,7 @@ See 'Examples.py' for example usage.
 
 TODO:
 Set up automatic trading
+Show date range in plot title
 """
 
 
@@ -31,9 +32,10 @@ class Stock(object):
 
     # SETUP
     #
-    def __init__(self, symbol, shares, avg_paid, fresh=False, plot=True, days=140):
+    def __init__(self, symbol, shares, avg_paid, fresh=False, fresh_sp=False, plot=True, days=140):
         """ Sample Inputs:
         Symbol 'SBUX', Current Shares 0, Avg Price Paid 50.10
+        Fresh = True fetches new data
         """
         self.buys = 0
         self.sells = 0
@@ -41,7 +43,7 @@ class Stock(object):
         self.symbol = symbol
         self.will_plot = plot
         self.daily = QuoteHistory.get_data(symbol, fresh, days=days)
-        self.sp = QuoteHistory.get_data('^GSPC', fresh, days=days)
+        self.sp = QuoteHistory.get_data('^GSPC', fresh_sp, days=days)
         warnings.filterwarnings(action="ignore", module="sklearn", message="internal gelsd")
         self.avg_paid = avg_paid
         self.debug = '\n' + self.symbol + ':\n'

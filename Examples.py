@@ -37,6 +37,7 @@ def sp_over_time(fresh):
     stocks = []
     df = pd.read_csv('indices/sp_members.csv')
     fresh_copy = fresh
+    fresh_sp = fresh
     for sym in df['Symbol']:
         print(sym)
         fresh_copy = fresh
@@ -44,9 +45,10 @@ def sp_over_time(fresh):
             day_lengths = [x * (7./5) for x in [365*5, 365, 100]] # * 7/5 for just trading days
             stock_intervals = [] # the list of, say, only AAPL's 5 year, 1 year, and 100 day analysis
             for days_length in day_lengths:
-                x = Stock.Stock(sym, 0, 0, fresh_copy, plot=False, days=days_length)
+                x = Stock.Stock(sym, 0, 0, fresh_copy, fresh_sp=fresh_sp, plot=False, days=days_length)
                 x.buy_or_sell(debug=False)
                 fresh_copy = False # so it doesn't change existing csv data of 5 years
+                fresh_sp = False # so it doesn't fetch GSPC (s&p 500) again each time
                 stock_intervals.append(x)
             stocks.append(stock_intervals)
         except Exception:
@@ -55,7 +57,7 @@ def sp_over_time(fresh):
     # sort the stock list of interval lists by the mean buying certainty of each stock's intervals
     stocks.sort(key=lambda x: np.array([y.buying_certainty for y in x]).mean(), reverse=True)
     print('\n\n\nSORTED STOCKS:\n\n\n')
-    sorted = stocks[:20] # only show top 20 
+    sorted = stocks[:20] # only show top 20
     for stock_interval in sorted:
         for stock in stock_interval:
             print(stock.debug)

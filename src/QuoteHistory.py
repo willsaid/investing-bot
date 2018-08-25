@@ -58,7 +58,7 @@ def get_data(symbol_val, is_fresh, start=None, end=None, days=None):
     """ Returns pandas dataframe of Date, Adj Close, and Volume from Yahoo Finance, or None if not available.
     End date can be assumed to be today.
     Start date is automatically 140 days ago, or about 100 market days.
-    Days ex: 365 for the past year.
+    Days ex: 365 for the past calendar year.
     """
     symbol_val = symbol_val.replace('.', '-') # BRK.B -> BRK-B
     event_val = "history" # historical data
