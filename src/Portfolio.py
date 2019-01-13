@@ -62,8 +62,8 @@ class Portfolio(object):
         Returns dataframe of all stocks inner joined on ^GSPC's 'Date' index_col
         """
         # set up dataframe with S&P 500
-        df = QuoteHistory.get_data('^GSPC', self.fresh, self.start_date, self.end_date, self.days)
-        df = df.rename(columns={'Adj Close': '^GSPC'}).drop('Volume', axis=1).dropna()
+        df = QuoteHistory.get_data('^IXIC', self.fresh, self.start_date, self.end_date, self.days)
+        df = df.rename(columns={'Adj Close': '^IXIC'}).drop('Volume', axis=1).dropna()
         for symbol in symbols:
             try:
                 df_temp = QuoteHistory.get_data(symbol, self.fresh, self.start_date, self.end_date, self.days)
@@ -72,7 +72,7 @@ class Portfolio(object):
             except Exception:
                 print('Failed to determine for {}'.format(symbol))
 
-        df = df.drop('^GSPC', axis=1) # gets rid of first stock used for indexing
+        df = df.drop('^IXIC', axis=1) # gets rid of first stock used for indexing
         # deal with NaN's by filling existing values forward, then backward
         # ideally, user should just use new data!
         df = df.fillna(method='ffill').fillna(method='backfill')
